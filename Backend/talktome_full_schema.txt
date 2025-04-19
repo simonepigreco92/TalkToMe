@@ -1,0 +1,213 @@
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY, -- Identificativo unico dell'utente
+    email VARCHAR(255) NOT NULL UNIQUE, -- Email per il login
+    password_hash VARCHAR(255) NOT NULL, -- Hash della password
+    display_name VARCHAR(100), -- Nome visualizzato
+    avatar_url TEXT, -- URL immagine profilo (opzionale)
+    last_login TIMESTAMP, -- Data e ora dell'ultimo accesso
+    language VARCHAR(10) DEFAULT 'en', -- Lingua preferita
+    is_active BOOLEAN DEFAULT TRUE, -- Stato attivo/inattivo
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- Data e ora di registrazione
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, -- Ultima modifica
+);
+
+CREATE TABLE user_ai_settings (
+    id SERIAL PRIMARY KEY, -- Identificativo unico della configurazione
+    user_id INT NOT NULL, -- Riferimento all'utente
+    ai_preset_id INT NOT NULL, -- Riferimento al preset base utilizzato
+    custom_gender VARCHAR(50), -- Genere personalizzato (se diverso dal preset)
+    custom_pitch INT, -- Tonalità personalizzata
+    custom_speech_rate DECIMAL(3, 2), -- Velocità personalizzata
+    custom_accent VARCHAR(50), -- Accento personalizzato
+    custom_voice_quality VARCHAR(50), -- Qualità vocale personalizzata
+    custom_tone VARCHAR(50), -- Tono personalizzato
+    custom_formality_level VARCHAR(50), -- Livello di formalità personalizzato
+    custom_empathy_level SMALLINT, -- Livello di empatia personalizzato
+    custom_focus VARCHAR(50), -- Focus personalizzato
+    custom_language VARCHAR(10), -- Lingua personalizzata
+    custom_proactive_level SMALLINT, -- Livello di iniziativa personalizzato
+    custom_response_length VARCHAR(50), -- Lunghezza delle risposte personalizzata
+    custom_personality VARCHAR(50), -- Personalità personalizzata
+    custom_color_theme VARCHAR(7), -- Colore tematico personalizzato
+    custom_dynamic_behavior BOOLEAN, -- Se il comportamento dinamico è personalizzato
+    is_active BOOLEAN DEFAULT TRUE, -- Se le impostazioni sono attive
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- Data di creazione
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, -- Ultima modifica
+    CONSTRAINT fk_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+    CONSTRAINT fk_ai_preset FOREIGN KEY (ai_preset_id) REFERENCES ai_presets (id) ON DELETE CASCADE
+);
+
+CREATE TABLE user_settings (
+    id SERIAL PRIMARY KEY, -- Identificativo unico per ogni set di impostazioni utente
+    user_id INT NOT NULL, -- Riferimento all'utente
+    language VARCHAR(10) DEFAULT 'en', -- Lingua preferita dell'utente
+    notifications_enabled BOOLEAN DEFAULT TRUE, -- Notifiche abilitate/disabilitate
+    show_emotion_checkins BOOLEAN DEFAULT TRUE, -- Mostrare promemoria per il check-in emozionale
+    dark_mode_enabled BOOLEAN DEFAULT FALSE, -- Tema scuro abilitato/disabilitato
+    preferred_ai_voice VARCHAR(50), -- Voce AI preferita (opzionale)
+    preferred_ai_tone VARCHAR(50), -- Tono AI preferito (opzionale)
+    sound_notifications_enabled BOOLEAN DEFAULT TRUE, -- Notifiche sonore abilitate/disabilitate
+    default_room_id INT, -- ROOM di default, se specificata
+    receive_checkin_reminder BOOLEAN DEFAULT TRUE, -- Ricevere promemoria per il check-in giornaliero
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- Data di creazione
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, -- Ultima modifica
+
+    CONSTRAINT fk_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+    CONSTRAINT fk_default_room FOREIGN KEY (default_room_id) REFERENCES rooms (id) ON DELETE SET NULL
+);
+
+CREATE TABLE users_rooms (
+    id SERIAL PRIMARY KEY, -- Identificativo unico per la personalizzazione
+    user_id INT NOT NULL, -- FK all'utente
+    room_id INT NOT NULL, -- FK alla ROOM
+    customization JSON, -- Personalizzazioni specifiche per l'utente
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- Data di creazione
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, -- Ultima modifica
+    CONSTRAINT fk_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+    CONSTRAINT fk_room FOREIGN KEY (room_id) REFERENCES rooms (id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_user_room ON users_rooms (user_id, room_id);
+
+CREATE TABLE emotional_states (
+    id SERIAL PRIMARY KEY, -- Identificativo unico dello stato emozionale
+    name VARCHAR(50) NOT NULL, -- Nome dello stato emozionale
+    description TEXT, -- Descrizione dello stato
+    color_code VARCHAR(7) NOT NULL, -- Codice colore HEX associato
+    intensity_levels JSON, -- Specifiche per i vari livelli di intensità
+    ai_match JSON, -- Percentuali di affinità con diversi AI_PRESETS
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- Data di creazione
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP -- Ultima modifica
+);
+
+CREATE TABLE emotional_states_checkin (
+    id SERIAL PRIMARY KEY, -- Identificativo unico del check-in emozionale
+    user_id INT NOT NULL, -- Identificativo dell'utente (FK)
+    emotional_state_id INT NOT NULL, -- Stato emozionale scelto (FK)
+    intensity_level INT NOT NULL, -- Livello di intensità scelto
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- Data e ora del check-in
+    notes TEXT, -- Note aggiuntive opzionali dell'utente
+    CONSTRAINT fk_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+    CONSTRAINT fk_emotional_state FOREIGN KEY (emotional_state_id) REFERENCES emotional_states (id) ON DELETE CASCADE
+);
+
+CREATE TABLE ai_presets (
+    id SERIAL PRIMARY KEY, -- Identificativo unico del preset
+    name VARCHAR(255) NOT NULL, -- Nome del preset (es. "Empatico", "Motivante")
+    description TEXT, -- Descrizione del preset
+    gender VARCHAR(50) DEFAULT 'neutral', -- Genere della voce (male, female, neutral)
+    pitch INT DEFAULT 0, -- Tonalità: valori positivi per toni più alti, negativi per toni più bassi
+    speech_rate DECIMAL(3, 2) DEFAULT 1.0, -- Velocità di parlato (1.0 = normale, <1 = lento, >1 = veloce)
+    accent VARCHAR(50), -- Accento (es. "British", "American")
+    voice_quality VARCHAR(50) DEFAULT 'natural', -- Qualità vocale (natural, robotic, artistic)
+    tone VARCHAR(50) DEFAULT 'neutral', -- Tono della comunicazione
+    formality_level VARCHAR(50) DEFAULT 'semi-formal', -- Livello di formalità
+    empathy_level SMALLINT DEFAULT 2, -- Livello di empatia (1 = minimo, 3 = massimo)
+    focus VARCHAR(50) DEFAULT 'supportive', -- Focus della comunicazione
+    language VARCHAR(10) DEFAULT 'en', -- Lingua predefinita
+    proactive_level SMALLINT DEFAULT 1, -- Livello di iniziativa (1 = minima, 3 = alta)
+    response_length VARCHAR(50) DEFAULT 'medium', -- Lunghezza delle risposte (short, medium, long)
+    personality VARCHAR(50) DEFAULT 'neutral', -- Personalità predefinita
+    color_theme VARCHAR(7) DEFAULT '#000000', -- Colore tematico delle risposte (esadecimale)
+    dynamic_behavior BOOLEAN DEFAULT TRUE, -- Se l'AI si adatta automaticamente
+    is_premium BOOLEAN DEFAULT FALSE, -- Indica se il preset è riservato agli utenti premium
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- Data di creazione
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP -- Ultima modifica
+);
+
+CREATE TABLE ai_engines (
+    id SERIAL PRIMARY KEY, -- Identificativo unico del motore AI
+    name VARCHAR(255) NOT NULL, -- Nome del motore AI
+    description TEXT, -- Descrizione del motore
+    api_endpoint TEXT NOT NULL, -- Endpoint API per la comunicazione
+    api_key VARCHAR(255) NOT NULL, -- API Key per l'accesso
+    pricing_model JSON NOT NULL, -- Modello di pricing con eventuali sconti
+    max_tokens INT, -- Numero massimo di token per richiesta
+    latency_ms INT DEFAULT 0, -- Latenza media in millisecondi
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- Data di creazione
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP -- Ultima modifica
+);
+
+CREATE TABLE ai_usage_logs (
+    id SERIAL PRIMARY KEY, -- Identificativo unico per il log
+    user_id BIGINT NOT NULL, -- Identificativo dell'utente che ha effettuato la richiesta
+    engine_id INT NOT NULL, -- Identificativo del motore AI utilizzato
+    preset_id INT, -- Identificativo del preset AI utilizzato (opzionale, se presente)
+    emotional_state_id INT, -- Identificativo dell'emotional state associato alla richiesta (opzionale)
+    request_payload JSON NOT NULL, -- Dettaglio della richiesta inviata all'AI (es. testo, impostazioni)
+    response_payload JSON, -- Dettaglio della risposta restituita dall'AI
+    cost DECIMAL(10, 4) NOT NULL DEFAULT 0.0, -- Costo della richiesta per la piattaforma
+    premium_discount DECIMAL(10, 4) DEFAULT 0.0, -- Sconto applicato agli utenti premium
+    latency_ms INT, -- Tempo impiegato dal motore AI per rispondere (latenza)
+    status VARCHAR(50) NOT NULL, -- Stato della richiesta (es. success, failure, timeout)
+    error_message TEXT, -- Dettagli sull'errore, se la richiesta fallisce
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP -- Data e ora della richiesta
+);
+
+-- Aggiunta delle relazioni
+ALTER TABLE ai_usage_logs
+ADD CONSTRAINT fk_user
+FOREIGN KEY (user_id) REFERENCES users(id)
+ON DELETE CASCADE;
+
+ALTER TABLE ai_usage_logs
+ADD CONSTRAINT fk_engine
+FOREIGN KEY (engine_id) REFERENCES ai_engines(id)
+ON DELETE CASCADE;
+
+ALTER TABLE ai_usage_logs
+ADD CONSTRAINT fk_preset
+FOREIGN KEY (preset_id) REFERENCES ai_presets(id)
+ON DELETE SET NULL;
+
+ALTER TABLE ai_usage_logs
+ADD CONSTRAINT fk_emotional_state
+FOREIGN KEY (emotional_state_id) REFERENCES emotional_states(id)
+ON DELETE SET NULL;
+
+-- Indici per ottimizzare le query più frequenti
+CREATE INDEX idx_user_id ON ai_usage_logs (user_id);
+CREATE INDEX idx_engine_id ON ai_usage_logs (engine_id);
+CREATE INDEX idx_status ON ai_usage_logs (status);
+CREATE INDEX idx_created_at ON ai_usage_logs (created_at);
+
+CREATE TABLE rooms (
+    id SERIAL PRIMARY KEY, -- Identificativo unico della ROOM
+    name VARCHAR(255) NOT NULL, -- Nome della ROOM
+    description TEXT, -- Descrizione della ROOM
+    base_layer_url TEXT NOT NULL, -- URL dell'immagine di sfondo base
+    overlay_layers JSON, -- Definizione dei layer extra (opzionale)
+    is_premium BOOLEAN DEFAULT FALSE, -- Indica se la ROOM è accessibile solo agli utenti premium
+    emotional_match JSON, -- Percentuali di affinità con diversi emotional states
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- Data di creazione
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP -- Ultima modifica
+);
+
+CREATE TABLE rooms_checkin (
+    id SERIAL PRIMARY KEY, -- Identificativo unico del check-in
+    user_id INT NOT NULL, -- Utente che effettua il check-in (FK)
+    room_id INT NOT NULL, -- ROOM scelta per il check-in (FK)
+    checkin_count INT NOT NULL DEFAULT 1, -- Numero di volte che l'utente ha effettuato il check-in
+    is_random BOOLEAN DEFAULT TRUE, -- Indica se la ROOM è stata assegnata in modo casuale
+    last_checkin TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- Ultima data e ora del check-in
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- Data e ora di registrazione
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, -- Ultima modifica
+    CONSTRAINT fk_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+    CONSTRAINT fk_room FOREIGN KEY (room_id) REFERENCES rooms (id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_user_room ON rooms_checkin (user_id, room_id);
+
+CREATE TABLE subscriptions (
+    id SERIAL PRIMARY KEY, -- Identificativo unico dell'abbonamento
+    user_id INT NOT NULL, -- ID dell'utente (FK)
+    subscription_type VARCHAR(50) NOT NULL, -- Tipo di abbonamento (es. free, premium, trial)
+    start_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, -- Data di inizio abbonamento
+    end_date TIMESTAMP, -- Data di fine abbonamento (null se indeterminata per "free")
+    is_active BOOLEAN DEFAULT TRUE, -- Stato attivo/inattivo
+    payment_method VARCHAR(50), -- Metodo di pagamento (opzionale)
+    auto_renew BOOLEAN DEFAULT FALSE, -- Se l'abbonamento si rinnova automaticamente
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- Data di creazione
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, -- Ultima modifica
+    CONSTRAINT fk_user_subscription FOREIGN KEY (user_id) REFERENCES users (id)
+);

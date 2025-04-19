@@ -1,0 +1,10 @@
+fastapi==0.95.1          # Framework principale per il backend
+uvicorn[standard]==0.21.1 # Server ASGI per eseguire FastAPI
+sqlalchemy==1.4.46       # ORM per la gestione del database
+pydantic==1.10.7         # Per la validazione e la serializzazione dei dati
+alembic==1.10.2          # Strumento per migrazioni del database
+python-dotenv==1.0.0     # Per la gestione delle variabili d'ambiente
+passlib[bcrypt]==1.7.4   # Per hashing sicuro delle password
+python-jose==3.3.0       # Per la gestione di JSON Web Tokens (JWT)
+asyncpg==0.27.0          # Driver asincrono per PostgreSQL
+PyJWT==2.8.0             # JWT per generazione Token
